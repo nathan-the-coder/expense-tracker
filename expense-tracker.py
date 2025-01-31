@@ -4,7 +4,6 @@ import json
 from datetime import datetime
 import os
 import prettytable
-from prettytable.prettytable import PrettyTable
 
 
 class ExpenseTracker:
@@ -21,6 +20,8 @@ class ExpenseTracker:
                 with open(self.filename, "r") as f:
                     self.expenses = json.load(f)
                     if self.expenses:  # Check if the file has data
+                        for expense in self.expenses:
+                            expense['date'] = datetime.strptime(expense['date'], "%Y-%m-%d").date()
                         self.next_id = (
                             max(expense["id"] for expense in self.expenses) + 1
                         )
@@ -37,7 +38,7 @@ class ExpenseTracker:
         with open(self.filename, "w") as f:
             json.dump(
                 [
-                    {**expense, "date": expense["date"].strftime("%Y-%m-%d")}
+                    {**expense, "date": expense['date'].strftime("%Y-%m-%d")}
                     for expense in self.expenses
                 ],
                 f,
@@ -64,7 +65,7 @@ class ExpenseTracker:
         total_expenses = []
         if month:
             for expense in self.expenses:
-                expense_date = datetime.strptime(expense["date"], "%Y-%m-%d").date()
+                expense_date = expense["date"]
                 if expense_date.month == month:
                     total_expenses.append(expense["amount"])
 
@@ -75,7 +76,7 @@ class ExpenseTracker:
                 total_expenses.append(expense["amount"])
             print(f"Total expenses: ${sum(total_expenses)}")
 
-    def list_expenses(self) -> PrettyTable:
+    def list_expenses(self) -> prettytable.PrettyTable:
         expenses_table = prettytable.PrettyTable()
         for expense in self.expenses:
             expenses_table.field_names = list(expense.keys())
@@ -103,7 +104,6 @@ def app():
 def add(description: str, amount: float):
     """Add a new expense."""
     tracker.add_expense(description, amount)
-    click.echo(f"Expense added successfully: (ID: {tracker.next_id}).")
 
 
 @app.command()
