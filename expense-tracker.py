@@ -21,7 +21,9 @@ class ExpenseTracker:
                     self.expenses = json.load(f)
                     if self.expenses:  # Check if the file has data
                         for expense in self.expenses:
-                            expense['date'] = datetime.strptime(expense['date'], "%Y-%m-%d").date()
+                            expense["date"] = datetime.strptime(
+                                expense["date"], "%Y-%m-%d"
+                            ).date()
                         self.next_id = (
                             max(expense["id"] for expense in self.expenses) + 1
                         )
@@ -38,7 +40,7 @@ class ExpenseTracker:
         with open(self.filename, "w") as f:
             json.dump(
                 [
-                    {**expense, "date": expense['date'].strftime("%Y-%m-%d")}
+                    {**expense, "date": expense["date"].strftime("%Y-%m-%d")}
                     for expense in self.expenses
                 ],
                 f,
@@ -46,6 +48,10 @@ class ExpenseTracker:
             )
 
     def add_expense(self, description: str, amount: float) -> None:
+        if amount < 0:
+            print("Invalid amount: must be greater than zero.")
+            return
+
         expense = {
             "id": self.next_id,
             "date": datetime.now().date(),
@@ -58,12 +64,26 @@ class ExpenseTracker:
         self.save_expenses()  # Save after adding an expense
 
     def delete_expense(self, id: int) -> None:
-        self.expenses = [expense for expense in self.expenses if expense["id"] != id]
-        self.save_expenses()  # Save after deleting an expense
+        found = False
+        for expense in self.expenses:
+            if expense["id"] == id:
+                found = True
+
+        if found:
+            self.expenses = [
+                expense for expense in self.expenses if expense["id"] != id
+            ]
+            self.save_expenses()  # Save after deleting an expense
+            print(f"Expense with ID {id} delete successfully")
+        else:
+            print(f"Expense with ID {id} not found")
 
     def expense_summary(self, month=None):
         total_expenses = []
         if month:
+            if month > 12:
+                print("Invalid month: must be less than or equal to 12")
+                return
             for expense in self.expenses:
                 expense_date = expense["date"]
                 if expense_date.month == month:
@@ -111,7 +131,6 @@ def add(description: str, amount: float):
 def delete(id):
     """Delete an expense based on id"""
     tracker.delete_expense(id)
-    click.echo("Expense delete successfully")
 
 
 @app.command(name="list")
