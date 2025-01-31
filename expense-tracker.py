@@ -1,18 +1,20 @@
+from typing import Any
 import click
 import json
-import csv
 from datetime import datetime
 import os
+import prettytable
+from prettytable.prettytable import PrettyTable
 
 
 class ExpenseTracker:
     def __init__(self, filename="expenses.json"):
         self.filename = filename
-        self.expenses = []
+        self.expenses: list[dict[str, Any]] = []
         self.next_id = 1
         self.load_expenses()
 
-    def load_expenses(self):
+    def load_expenses(self) -> None:
         """Load expenses from a JSON file."""
         if os.path.exists(self.filename):
             try:
@@ -42,7 +44,7 @@ class ExpenseTracker:
                 indent=4,
             )
 
-    def add_expense(self, description, amount):
+    def add_expense(self, description: str, amount: float) -> None:
         expense = {
             "id": self.next_id,
             "date": datetime.now().date(),
@@ -54,7 +56,7 @@ class ExpenseTracker:
         self.next_id += 1
         self.save_expenses()  # Save after adding an expense
 
-    def delete_expense(self, id):
+    def delete_expense(self, id: int) -> None:
         self.expenses = [expense for expense in self.expenses if expense["id"] != id]
         self.save_expenses()  # Save after deleting an expense
 
@@ -73,15 +75,12 @@ class ExpenseTracker:
                 total_expenses.append(expense["amount"])
             print(f"Total expenses: ${sum(total_expenses)}")
 
-    def export_to_json(self, filename):
-        with open(filename, "w") as f:
-            json.dump(self.expenses, f, indent=4)
-
-    def export_to_csv(self, filename):
-        with open(filename, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["description", "amount"])
-            writer.writeheader()
-            writer.writerows(self.expenses)
+    def list_expenses(self) -> PrettyTable:
+        expenses_table = prettytable.PrettyTable()
+        for expense in self.expenses:
+            expenses_table.field_names = list(expense.keys())
+            expenses_table.add_row(list(expense.values()))
+        return expenses_table
 
 
 # Initialize ExpenseTracker instance
@@ -101,10 +100,25 @@ def app():
 @click.option(
     "--amount", type=float, prompt="Amount", help="The amount for the expense."
 )
-def add(description, amount):
+def add(description: str, amount: float):
     """Add a new expense."""
     tracker.add_expense(description, amount)
-    click.echo(f"Added expense: {description} for {amount}.")
+    click.echo(f"Expense added successfully: (ID: {tracker.next_id}).")
+
+
+@app.command()
+@click.option("--id", type=int, prompt="ID", help="ID of the expenses to delete.")
+def delete(id):
+    """Delete an expense based on id"""
+    tracker.delete_expense(id)
+    click.echo("Expense delete successfully")
+
+
+@app.command(name="list")
+def list_expenses():
+    """List all expenses"""
+    table = tracker.list_expenses()
+    click.echo(table)
 
 
 @app.command()
@@ -114,22 +128,5 @@ def summary(month):
     tracker.expense_summary(month)
 
 
-@app.command()
-@click.argument("filename")
-def export_json(filename):
-    """Export expenses to a JSON file."""
-    tracker.export_to_json(filename)
-    click.echo(f"Exported expenses to {filename}.")
-
-
-@app.command()
-@click.argument("filename")
-def export_csv(filename):
-    """Export expenses to a CSV file."""
-    tracker.export_to_csv(filename)
-    click.echo(f"Exported expenses to {filename}.")
-
-
 if __name__ == "__main__":
     app()
-
